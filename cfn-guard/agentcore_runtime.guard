@@ -1,0 +1,76 @@
+# cfn-guard rules for AWS::BedrockAgentCore::Runtime
+#
+# Run with:
+#   cfn-guard validate --rules cfn-guard/agentcore_runtime.guard --data examples/agentcore-insecure.yaml
+#
+# cfn-guard reads the template structure directly, so unmodeled/new resource
+# types like Bedrock AgentCore work with no special flags.
+
+#
+# Select every AgentCore Runtime resource in the template.
+#
+let agentcore_runtimes = Resources.*[ Type == 'AWS::BedrockAgentCore::Runtime' ]
+
+#
+# Rule 1: inbound authorization must be configured.
+#
+rule agentcore_requires_authorizer when %agentcore_runtimes !empty {
+    %agentcore_runtimes.Properties.AuthorizerConfiguration exists
+    <<
+        [CKV_AGENTCORE_1] AgentCore Runtime must set AuthorizerConfiguration so
+        incoming requests are authenticated.
+    >>
+}
+
+#
+# Rule 2: runtime must use VPC network isolation.
+#
+rule agentcore_requires_vpc when %agentcore_runtimes !empty {
+    %agentcore_runtimes.Properties.NetworkConfiguration exists
+    <<
+        [CKV_AGENTCORE_2a] AgentCore Runtime must define NetworkConfiguration.
+    >>
+    %agentcore_runtimes.Properties.NetworkConfiguration.NetworkMode == 'VPC'
+    <<
+        [CKV_AGENTCORE_2b] AgentCore Runtime NetworkMode must be 'VPC', not 'PUBLIC'.
+    >>
+}
+
+#
+# Rule 3: an execution role (RoleArn) must be provided and non-empty.
+#
+rule agentcore_requires_role when %agentcore_runtimes !empty {
+    %agentcore_runtimes.Properties.RoleArn exists
+    %agentcore_runtimes.Properties.RoleArn != ""
+    <<
+        [CKV_AGENTCORE_3] AgentCore Runtime must specify a non-empty RoleArn
+        (an explicit least-privilege execution role).
+    >>
+}
+
+#
+# Rule 4: no plaintext secrets in EnvironmentVariables.
+#
+# cfn-guard cannot pattern-match arbitrary map keys, so this enumerates the
+# common secret-like variable names explicitly. Extend the list as needed.
+#
+rule agentcore_no_plaintext_secrets when %agentcore_runtimes !empty {
+    %agentcore_runtimes {
+        when Properties.EnvironmentVariables exists {
+            Properties.EnvironmentVariables.DB_PASSWORD not exists
+            Properties.EnvironmentVariables.OPENAI_API_KEY not exists
+            Properties.EnvironmentVariables.PASSWORD not exists
+            Properties.EnvironmentVariables.SECRET not exists
+            Properties.EnvironmentVariables.API_KEY not exists
+            Properties.EnvironmentVariables.ACCESS_KEY not exists
+            Properties.EnvironmentVariables.SECRET_KEY not exists
+            Properties.EnvironmentVariables.TOKEN not exists
+            Properties.EnvironmentVariables.PRIVATE_KEY not exists
+            <<
+                [CKV_AGENTCORE_4] AgentCore Runtime must not set secret-like
+                plaintext environment variables; use AgentCore Identity or a
+                secrets store instead.
+            >>
+        }
+    }
+}

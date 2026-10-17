@@ -1,0 +1,26 @@
+# Downloaded tool binaries (platform-specific; see README for how to fetch)
+tools/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+
+# OPA / Conftest / archives
+*.tar.gz
+*.zip
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local scratch / output
+*.log
+scratch/
+tmp/

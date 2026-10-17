@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/agentcore-template.json",
+  "type": "object",
+  "required": ["Resources"],
+  "properties": {
+    "AWSTemplateFormatVersion": { "type": "string" },
+    "Description": { "type": "string" },
+    "Resources": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["Type"],
+        "properties": {
+          "Type": { "type": "string" },
+          "Properties": { "type": "object" }
+        }
+      }
+    }
+  }
+}

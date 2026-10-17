@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Insecure AgentCore Runtime used to exercise the custom Trivy policy.
+
+Resources:
+  # This runtime violates all four rules:
+  #  - no AuthorizerConfiguration
+  #  - NetworkMode is PUBLIC
+  #  - no RoleArn
+  #  - plaintext secret in EnvironmentVariables
+  InsecureAgentRuntime:
+    Type: AWS::BedrockAgentCore::Runtime
+    Properties:
+      AgentRuntimeName: insecure_agent
+      Description: Example runtime with insecure settings
+      AgentRuntimeArtifact:
+        ContainerConfiguration:
+          ContainerUri: 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-agent:latest
+      NetworkConfiguration:
+        NetworkMode: PUBLIC
+      EnvironmentVariables:
+        LOG_LEVEL: info
+        OPENAI_API_KEY: sk-plaintext-do-not-do-this
+        DB_PASSWORD: hunter2
+
+  # This runtime is compliant and should produce no findings.
+  SecureAgentRuntime:
+    Type: AWS::BedrockAgentCore::Runtime
+    Properties:
+      AgentRuntimeName: secure_agent
+      Description: Example runtime with hardened settings
+      RoleArn: arn:aws:iam::123456789012:role/AgentCoreRuntimeRole
+      AgentRuntimeArtifact:
+        ContainerConfiguration:
+          ContainerUri: 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-agent:1.2.3
+      AuthorizerConfiguration:
+        CustomJWTAuthorizer:
+          DiscoveryUrl: https://example.auth.us-east-1.amazoncognito.com/.well-known/openid-configuration
+          AllowedClients:
+            - my-client-id
+      NetworkConfiguration:
+        NetworkMode: VPC
+        NetworkModeConfig:
+          Subnets:
+            - subnet-0123456789abcdef0
+          SecurityGroups:
+            - sg-0123456789abcdef0
+      EnvironmentVariables:
+        LOG_LEVEL: info
